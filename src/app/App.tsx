@@ -457,7 +457,7 @@ function Hero(){
               <span className="text-purple-400">adi@dev</span>
               <span className="text-slate-600">:~$</span>
               <span className="text-green-400 ml-1.5 hidden xs:inline">./run portfolio</span>
-              <span className="text-green-400 ml-1.5 xs:hidden">--passion</span>
+              <span className="text-green-400 ml-1.5 xs:hidden">run with passion</span>
             </span>
           </div>
         </motion.div>
