@@ -307,51 +307,59 @@ void main(){
 }`;
 
 // ── Globe shaders ────────────────────────────────────────────────────────────
+// Vertex: sine-wave displacement only in Displace mode (avoids 3D hash compilation issues)
 const GLOBE_VS=`
 varying vec3 vN;varying vec3 vP;varying vec2 vUv;
 uniform float u_time,uDisplace,uSpeed,uMode;
-float h3(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5);}
-float n3(vec3 p){
-  vec3 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
-  return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),u.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),u.x),u.y),
-             mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),u.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),u.x),u.y),u.z);
-}
 void main(){
-  vUv=uv;vec3 pos=position;
-  float d=(n3(pos*2.+u_time*uSpeed*.5)*2.-1.)*uDisplace;
-  if(uMode>4.5)pos+=normal*d;
+  vUv=uv;
+  vec3 pos=position;
+  if(uMode>4.5){
+    float d=sin(pos.x*5.+u_time*uSpeed)*sin(pos.y*4.+u_time*uSpeed*.8)*sin(pos.z*3.+u_time*uSpeed*.6);
+    pos+=normal*d*uDisplace;
+  }
   vN=normalize(normalMatrix*normal);
   vP=(modelViewMatrix*vec4(pos,1.)).xyz;
   gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.);
 }`;
 
+// Fragment: ambient bumped so dark side is always visible against background
 const GLOBE_FS=`precision mediump float;
 varying vec3 vN;varying vec3 vP;varying vec2 vUv;
 uniform float u_time,uMode,uGlow,uRough,uSpeed;
 void main(){
-  vec3 N=normalize(vN);vec3 V=normalize(-vP);
+  vec3 N=normalize(vN);
+  vec3 V=normalize(-vP);
   vec3 L=normalize(vec3(2.,3.,4.));
   float diff=max(dot(N,L),0.);
+  float nv=max(dot(N,V),0.);
   float spec=pow(max(dot(reflect(-L,N),V),0.),max(1.,uRough*64.));
-  float fres=pow(1.-abs(dot(N,V)),3.);
+  float fres=pow(1.-nv,3.);
   vec3 c1=vec3(.545,.361,.965),c2=vec3(.133,.827,.933),c3=vec3(.957,.443,.714);
-  vec3 col=c1;float alpha=1.;
+  vec3 col;float alpha=1.;
   if(uMode<.5){
-    col=mix(c1,c2,diff)*(.1+diff*.9)+c2*spec*uGlow;
+    // Diffuse: min ambient = 0.32 so dark side is visible purple
+    col=c1*.32+mix(c1,c2,diff)*diff*.68+c2*spec*uGlow;
   }else if(uMode<1.5){
-    col=mix(vec3(.03,.02,.07),c2,pow(fres,2.))*uGlow+c1*.15*diff;
+    // Fresnel rim: core is dim purple, edge glows cyan
+    col=c1*.28+c2*pow(fres,1.5)*uGlow*2.+c1*diff*.12;
   }else if(uMode<2.5){
-    float d=diff>.7?1.:diff>.35?.55:.1;
-    col=mix(c1,c2,d)*(.15+d*.85);
-    if(1.-abs(dot(N,V))<.12+uRough*.12)col=vec3(0.);
+    // Toon: stepped diffuse, outline at silhouette (nv<0.18 = edge, not centre)
+    float d=diff>.65?1.:diff>.3?.5:.12;
+    col=mix(c1,c2,d)*max(.32,d);
+    if(nv<.18+uRough*.1)col=vec3(.04,.02,.08);
   }else if(uMode<3.5){
-    col=mix(c2,c3,sin(vUv.y*6.28+u_time*uSpeed)*.5+.5)+fres*c1*2.;
-    alpha=.25+fres*.75;
+    // Crystal: animated gradient, semi-transparent
+    float wave=sin(vUv.y*6.28+u_time*uSpeed)*.5+.5;
+    col=mix(c2*.8,c3*.8,wave)+c1*fres*2.;
+    alpha=.5+fres*.5;
   }else if(uMode<4.5){
+    // Normal visualiser: always bright
     col=N*.5+.5;
   }else{
-    float n=sin(vUv.x*12.+u_time*uSpeed)*sin(vUv.y*12.+u_time*uSpeed*.7);
-    col=mix(c1,c3,n*.5+.5)*(.5+diff*.5)+fres*c2*uGlow;
+    // Displace: chromatic sine pattern + lighting
+    float n=sin(vUv.x*12.+u_time*uSpeed)*sin(vUv.y*8.+u_time*uSpeed*.7)*.5+.5;
+    col=mix(c1,c3,n)*(.4+diff*.6)+fres*c2*uGlow;
   }
   gl_FragColor=vec4(col,alpha);
 }`;
