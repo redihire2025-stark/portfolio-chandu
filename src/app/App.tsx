@@ -189,11 +189,11 @@ const PERSONAL_PROJECTS=[
 
 const FREELANCE_PROJECTS=[
   {
-    title:"RediHire", sub:"IT Staffing & Recruitment Services", url:"www.redihire.com", emoji:"🤝",
+    title:"RediHire", sub:"IT Services Company", url:"www.redihire.com", emoji:"🤝",
     tech:["Next.js","TypeScript","Node.js","PostgreSQL","React","Tailwind CSS"],
     color:"#8b5cf6", g1:"#7c3aed", g2:"#4f46e5",
     metrics:[{v:"500+",l:"Clients Served"},{v:"10K+",l:"Placements"},{v:"15+",l:"Industry Verticals"},{v:"Pan-India",l:"Reach"}],
-    desc:"RediHire is a service-based IT staffing & recruitment company — not a SaaS platform. They connect businesses with pre-vetted tech talent across India. Built their full web presence: service pages, candidate intake flows, employer inquiry portals, and a modern brand identity that converts visitors into leads.",
+    desc:"RediHire is a full-spectrum IT services company — beyond staffing they deliver software development, cloud solutions, digital transformation, and managed IT support. Built their complete web presence: service landing pages, client inquiry flows, talent-connect portals, and a modern brand that converts visitors into long-term partners.",
   },
   {
     title:"VizoCloud", sub:"3D Infrastructure Visualiser", url:"www.vizocloud.com", emoji:"☁️",
@@ -207,7 +207,7 @@ const FREELANCE_PROJECTS=[
     tech:["Next.js","React","Node.js","PostgreSQL","Elasticsearch","AWS"],
     color:"#4ade80", g1:"#16a34a", g2:"#0f766e",
     metrics:[{v:"5K+",l:"Active Jobs"},{v:"50K+",l:"Job Seekers"},{v:"1,200+",l:"Employers"},{v:"30+",l:"Job Categories"}],
-    desc:"RHirePro is a Naukri-style job portal and hiring marketplace where employers post vacancies and candidates discover opportunities. Built the full platform — job listings with advanced search & filters, employer dashboards for applicant tracking, candidate profiles with resume upload, and smart job-match recommendations.",
+    desc:"RHirePro is a job portal and hiring marketplace where employers post vacancies and candidates discover opportunities. Built the full platform — job listings with advanced search & filters, employer dashboards for applicant tracking, candidate profiles with resume upload, and smart job-match recommendations.",
   },
   {
     title:"Lutti Studios", sub:"Award-Winning Creative Agency", url:"www.luttistudios.in", emoji:"🏆",
@@ -306,8 +306,106 @@ void main(){
   gl_FragColor=vec4(clamp(col,0.,1.),1.);
 }`;
 
-interface CtrlCfg{key:string;label:string;min:number;max:number;step:number;def:number;}
-interface DemoCfg{name:string;emoji:string;desc:string;fs:string;controls:CtrlCfg[];}
+// ── Globe shaders ────────────────────────────────────────────────────────────
+const GLOBE_VS=`
+varying vec3 vN;varying vec3 vP;varying vec2 vUv;
+uniform float u_time,uDisplace,uSpeed,uMode;
+float h3(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5);}
+float n3(vec3 p){
+  vec3 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
+  return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),u.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),u.x),u.y),
+             mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),u.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),u.x),u.y),u.z);
+}
+void main(){
+  vUv=uv;vec3 pos=position;
+  float d=(n3(pos*2.+u_time*uSpeed*.5)*2.-1.)*uDisplace;
+  if(uMode>4.5)pos+=normal*d;
+  vN=normalize(normalMatrix*normal);
+  vP=(modelViewMatrix*vec4(pos,1.)).xyz;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.);
+}`;
+
+const GLOBE_FS=`precision mediump float;
+varying vec3 vN;varying vec3 vP;varying vec2 vUv;
+uniform float u_time,uMode,uGlow,uRough,uSpeed;
+void main(){
+  vec3 N=normalize(vN);vec3 V=normalize(-vP);
+  vec3 L=normalize(vec3(2.,3.,4.));
+  float diff=max(dot(N,L),0.);
+  float spec=pow(max(dot(reflect(-L,N),V),0.),max(1.,uRough*64.));
+  float fres=pow(1.-abs(dot(N,V)),3.);
+  vec3 c1=vec3(.545,.361,.965),c2=vec3(.133,.827,.933),c3=vec3(.957,.443,.714);
+  vec3 col=c1;float alpha=1.;
+  if(uMode<.5){
+    col=mix(c1,c2,diff)*(.1+diff*.9)+c2*spec*uGlow;
+  }else if(uMode<1.5){
+    col=mix(vec3(.03,.02,.07),c2,pow(fres,2.))*uGlow+c1*.15*diff;
+  }else if(uMode<2.5){
+    float d=diff>.7?1.:diff>.35?.55:.1;
+    col=mix(c1,c2,d)*(.15+d*.85);
+    if(1.-abs(dot(N,V))<.12+uRough*.12)col=vec3(0.);
+  }else if(uMode<3.5){
+    col=mix(c2,c3,sin(vUv.y*6.28+u_time*uSpeed)*.5+.5)+fres*c1*2.;
+    alpha=.25+fres*.75;
+  }else if(uMode<4.5){
+    col=N*.5+.5;
+  }else{
+    float n=sin(vUv.x*12.+u_time*uSpeed)*sin(vUv.y*12.+u_time*uSpeed*.7);
+    col=mix(c1,c3,n*.5+.5)*(.5+diff*.5)+fres*c2*uGlow;
+  }
+  gl_FragColor=vec4(col,alpha);
+}`;
+
+// ── Particle shaders ─────────────────────────────────────────────────────────
+const PARTICLE_VS=`
+attribute vec3 aV0;
+attribute float aSd;
+uniform float u_time,uSpeed,uGravity,uTurbulence,uSize,uLifetime,uShape;
+varying float vLife;
+void main(){
+  float lt=max(.1,uLifetime);
+  float t=mod(u_time*uSpeed+aSd*lt,lt)/lt;
+  vLife=t;
+  float age=t*lt;
+  vec3 pos;
+  if(uShape<.5){
+    pos=position+aV0*age;
+    pos.y-=.5*uGravity*age*age;
+  }else if(uShape<1.5){
+    pos=vec3(position.x*.3,age*1.5+position.y*.1,position.z*.3);
+    pos.y-=.5*max(0.,uGravity)*age*age;
+  }else if(uShape<2.5){
+    float a=aSd*6.28318+age*uSpeed*2.;
+    float r=.9*(1.-t);
+    pos=vec3(cos(a)*r,(aSd-.5)*1.4,sin(a)*r);
+  }else{
+    float a=aSd*6.28318;float r=age*1.2;
+    pos=vec3(cos(a)*r,sin(aSd*3.14159)*age*.5,sin(a)*r);
+    pos.y-=.5*uGravity*age*age;
+  }
+  pos.x+=sin(age*3.7+aSd*6.28)*uTurbulence*.5;
+  pos.z+=cos(age*2.9+aSd*6.28)*uTurbulence*.5;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.);
+  gl_PointSize=max(1.,uSize)*(200./max(.1,gl_Position.w));
+}`;
+
+const PARTICLE_FS=`precision mediump float;
+uniform float uColorA,uColorB;
+varying float vLife;
+vec3 hsl(float h,float s,float l){
+  vec3 rgb=clamp(abs(mod(h*6.+vec3(0,4,2),6.)-3.)-1.,0.,1.);
+  return l+s*(rgb-.5)*(1.-abs(2.*l-1.));
+}
+void main(){
+  vec2 uv=gl_PointCoord*2.-1.;
+  float r=length(uv);if(r>1.)discard;
+  float alpha=(1.-r*r)*(1.-vLife*.9);
+  vec3 col=hsl(mix(uColorA,uColorB,vLife)/360.,.9,.65);
+  gl_FragColor=vec4(col,alpha);
+}`;
+
+interface CtrlCfg{key:string;label:string;min:number;max:number;step:number;def:number;type?:"range"|"mode";options?:string[];}
+interface DemoCfg{name:string;emoji:string;desc:string;fs:string;controls:CtrlCfg[];canvasType?:"quad"|"globe"|"particles";}
 
 const SHADER_DEMOS:DemoCfg[]=[
   {name:"Plasma Wave",emoji:"🌊",desc:"Sine-wave plasma — pure GLSL fragment math",fs:PLASMA_FS,controls:[
@@ -329,6 +427,24 @@ const SHADER_DEMOS:DemoCfg[]=[
     {key:"uSpeed",label:"Speed",min:.05,max:2,step:.05,def:.3},
     {key:"uOctaves",label:"Octaves",min:1,max:8,step:1,def:5},
     {key:"uLac",label:"Lacunarity",min:1.5,max:3.5,step:.1,def:2},
+  ]},
+  {name:"Shader Globe",emoji:"🌍",desc:"Drag to orbit · 6 live shader modes — vertex displacement, Fresnel, Toon, Crystal, Normal vis & more",fs:"",canvasType:"globe",controls:[
+    {key:"uMode",label:"Shader Mode",min:0,max:5,step:1,def:0,type:"mode",options:["Diffuse","Fresnel","Toon","Crystal","Normals","Displace"]},
+    {key:"uGlow",label:"Glow / Specular",min:0,max:3,step:.05,def:1.2},
+    {key:"uRough",label:"Roughness",min:0,max:1,step:.02,def:.5},
+    {key:"uDisplace",label:"Displacement",min:0,max:.4,step:.01,def:0},
+    {key:"uSpeed",label:"Anim Speed",min:0,max:2,step:.05,def:.5},
+  ]},
+  {name:"Particles",emoji:"✨",desc:"GPU particle system — shape, gravity, turbulence & color all live",fs:"",canvasType:"particles",controls:[
+    {key:"uCount",label:"Particle Count",min:200,max:4000,step:100,def:1200},
+    {key:"uShape",label:"Emission Shape",min:0,max:3,step:1,def:0,type:"mode",options:["Sphere","Fountain","Vortex","Ring"]},
+    {key:"uSize",label:"Particle Size",min:2,max:24,step:.5,def:8},
+    {key:"uSpeed",label:"Speed",min:.1,max:3,step:.05,def:1},
+    {key:"uGravity",label:"Gravity",min:-2,max:3,step:.05,def:.5},
+    {key:"uTurbulence",label:"Turbulence",min:0,max:1.5,step:.02,def:.2},
+    {key:"uLifetime",label:"Lifetime (s)",min:.3,max:5,step:.1,def:2},
+    {key:"uColorA",label:"Color A hue°",min:0,max:359,step:1,def:260},
+    {key:"uColorB",label:"Color B hue°",min:0,max:359,step:1,def:320},
   ]},
 ];
 
@@ -365,6 +481,131 @@ function ShaderCanvas({demo,params}:{demo:DemoCfg;params:Record<string,number>})
     ro.observe(el);
     return()=>{cancelAnimationFrame(raf);ro.disconnect();mat.dispose();geo.dispose();renderer.dispose();if(el.contains(renderer.domElement))el.removeChild(renderer.domElement);};
   },[demo]);
+  return <div ref={mountRef} className="w-full h-full"/>;
+}
+
+function GlobeCanvas({params}:{params:Record<string,number>}){
+  const mountRef=useRef<HTMLDivElement>(null);
+  const stateRef=useRef(params);
+  useEffect(()=>{stateRef.current=params;},[params]);
+  useEffect(()=>{
+    const el=mountRef.current;if(!el)return;
+    const renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setClearColor(0x06050f);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(el.clientWidth||300,el.clientHeight||300);
+    el.appendChild(renderer.domElement);
+    const camera=new THREE.PerspectiveCamera(45,(el.clientWidth||300)/(el.clientHeight||300),.1,100);
+    camera.position.z=2.8;
+    const scene=new THREE.Scene();
+    const geo=new THREE.SphereGeometry(1,64,64);
+    const unis:Record<string,THREE.IUniform>={u_time:{value:0},uMode:{value:0},uGlow:{value:1.2},uRough:{value:.5},uDisplace:{value:0},uSpeed:{value:.5}};
+    const mat=new THREE.ShaderMaterial({vertexShader:GLOBE_VS,fragmentShader:GLOBE_FS,uniforms:unis,transparent:true,side:THREE.FrontSide});
+    const mesh=new THREE.Mesh(geo,mat);
+    scene.add(mesh);
+    let rotX=0,rotY=0,isDrag=false,lx=0,ly=0;
+    const el2=renderer.domElement;
+    const md=(e:MouseEvent)=>{isDrag=true;lx=e.clientX;ly=e.clientY;};
+    const mm=(e:MouseEvent)=>{if(!isDrag)return;rotY+=(e.clientX-lx)*.007;rotX+=(e.clientY-ly)*.007;lx=e.clientX;ly=e.clientY;};
+    const mu=()=>{isDrag=false;};
+    const td=(e:TouchEvent)=>{isDrag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;};
+    const tm=(e:TouchEvent)=>{if(!isDrag)return;rotY+=(e.touches[0].clientX-lx)*.007;rotX+=(e.touches[0].clientY-ly)*.007;lx=e.touches[0].clientX;ly=e.touches[0].clientY;};
+    el2.addEventListener("mousedown",md);window.addEventListener("mousemove",mm);window.addEventListener("mouseup",mu);
+    el2.addEventListener("touchstart",td,{passive:true});window.addEventListener("touchmove",tm,{passive:true});window.addEventListener("touchend",mu);
+    let raf:number;const timer=new THREE.Timer();
+    const animate=()=>{
+      raf=requestAnimationFrame(animate);timer.update();
+      const p=stateRef.current;
+      unis.u_time.value=timer.getElapsed();
+      unis.uMode.value=p.uMode??0;
+      unis.uGlow.value=p.uGlow??1.2;
+      unis.uRough.value=p.uRough??.5;
+      unis.uDisplace.value=p.uDisplace??0;
+      unis.uSpeed.value=p.uSpeed??.5;
+      const m=Math.round(unis.uMode.value);mat.transparent=m===3;
+      if(!isDrag)rotY+=.004;
+      mesh.rotation.set(rotX,rotY,0);
+      renderer.render(scene,camera);
+    };
+    animate();
+    const ro=new ResizeObserver(()=>{if(!el)return;renderer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();});
+    ro.observe(el);
+    return()=>{
+      cancelAnimationFrame(raf);ro.disconnect();
+      el2.removeEventListener("mousedown",md);window.removeEventListener("mousemove",mm);window.removeEventListener("mouseup",mu);
+      el2.removeEventListener("touchstart",td);window.removeEventListener("touchmove",tm);window.removeEventListener("touchend",mu);
+      mat.dispose();geo.dispose();renderer.dispose();
+      if(el.contains(el2))el.removeChild(el2);
+    };
+  },[]);
+  return <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing"/>;
+}
+
+function ParticleCanvas({params}:{params:Record<string,number>}){
+  const mountRef=useRef<HTMLDivElement>(null);
+  const paramsRef=useRef(params);
+  const countRef=useRef(-1);
+  const ptsRef=useRef<THREE.Points|null>(null);
+  const geoRef=useRef<THREE.BufferGeometry|null>(null);
+  const sceneRef=useRef<THREE.Scene|null>(null);
+  const matRef=useRef<THREE.ShaderMaterial|null>(null);
+  useEffect(()=>{paramsRef.current=params;},[params]);
+  useEffect(()=>{
+    const el=mountRef.current;if(!el)return;
+    const renderer=new THREE.WebGLRenderer({antialias:false});
+    renderer.setClearColor(0x06050f);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(el.clientWidth||300,el.clientHeight||300);
+    el.appendChild(renderer.domElement);
+    const camera=new THREE.PerspectiveCamera(60,(el.clientWidth||300)/(el.clientHeight||300),.01,100);
+    camera.position.z=3;
+    const scene=new THREE.Scene();sceneRef.current=scene;
+    const unis:Record<string,THREE.IUniform>={u_time:{value:0},uSpeed:{value:1},uGravity:{value:.5},uTurbulence:{value:.2},uSize:{value:8},uLifetime:{value:2},uShape:{value:0},uColorA:{value:260},uColorB:{value:320}};
+    const mat=new THREE.ShaderMaterial({vertexShader:PARTICLE_VS,fragmentShader:PARTICLE_FS,uniforms:unis,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+    matRef.current=mat;
+    const mkGeo=(n:number)=>{
+      if(geoRef.current){geoRef.current.dispose();if(ptsRef.current)scene.remove(ptsRef.current);}
+      const pos=new Float32Array(n*3),vel=new Float32Array(n*3),sd=new Float32Array(n);
+      for(let i=0;i<n;i++){
+        const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=.05+Math.random()*.4;
+        const sx=Math.sin(ph)*Math.cos(th),sy=Math.sin(ph)*Math.sin(th),sz=Math.cos(ph);
+        pos[i*3]=sx*r;pos[i*3+1]=sy*r;pos[i*3+2]=sz*r;
+        const sp=.5+Math.random()*.5;
+        vel[i*3]=sx*sp;vel[i*3+1]=(sy+.5)*sp;vel[i*3+2]=sz*sp;
+        sd[i]=Math.random();
+      }
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+      geo.setAttribute("aV0",new THREE.BufferAttribute(vel,3));
+      geo.setAttribute("aSd",new THREE.BufferAttribute(sd,1));
+      geoRef.current=geo;
+      const pts=new THREE.Points(geo,mat);ptsRef.current=pts;scene.add(pts);
+    };
+    mkGeo(1200);countRef.current=1200;
+    let raf:number;const timer=new THREE.Timer();
+    const animate=()=>{
+      raf=requestAnimationFrame(animate);timer.update();
+      const p=paramsRef.current;
+      const cnt=Math.round(p.uCount??1200);
+      if(Math.abs(cnt-countRef.current)>99){mkGeo(cnt);countRef.current=cnt;}
+      unis.u_time.value=timer.getElapsed();
+      unis.uSpeed.value=p.uSpeed??1;unis.uGravity.value=p.uGravity??.5;
+      unis.uTurbulence.value=p.uTurbulence??.2;unis.uSize.value=p.uSize??8;
+      unis.uLifetime.value=p.uLifetime??2;unis.uShape.value=Math.round(p.uShape??0);
+      unis.uColorA.value=p.uColorA??260;unis.uColorB.value=p.uColorB??320;
+      if(ptsRef.current)ptsRef.current.rotation.y+=.003;
+      renderer.render(scene,camera);
+    };
+    animate();
+    const ro=new ResizeObserver(()=>{if(!el)return;renderer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();});
+    ro.observe(el);
+    return()=>{
+      cancelAnimationFrame(raf);ro.disconnect();
+      if(geoRef.current)geoRef.current.dispose();
+      if(matRef.current)matRef.current.dispose();
+      renderer.dispose();if(el.contains(renderer.domElement))el.removeChild(renderer.domElement);
+    };
+  },[]);
   return <div ref={mountRef} className="w-full h-full"/>;
 }
 
@@ -868,15 +1109,29 @@ function Showcase(){
         <div key={c.key} className="mb-4">
           <div className="flex items-center justify-between mb-1.5">
             <span className="fm text-[11px] text-slate-400">{c.label}</span>
-            <span className="fm text-[11px] text-cyan-400 tabular-nums">{params[c.key].toFixed(2)}</span>
+            {c.type!=="mode"&&<span className="fm text-[11px] text-cyan-400 tabular-nums">{params[c.key].toFixed(c.step<1?2:0)}</span>}
           </div>
-          <input type="range" className="su"
-            min={c.min} max={c.max} step={c.step} value={params[c.key]}
-            onChange={e=>setParam(c.key,parseFloat(e.target.value))}/>
-          <div className="flex justify-between mt-0.5">
-            <span className="fm text-[9px] text-slate-700 italic">{c.key}</span>
-            <span className="fm text-[9px] text-slate-700">{c.min} – {c.max}</span>
-          </div>
+          {c.type==="mode"?(
+            <div className="flex flex-wrap gap-1.5">
+              {(c.options??[]).map((opt,idx)=>(
+                <button key={idx} onClick={()=>setParam(c.key,idx)}
+                  className={`px-2.5 py-1 rounded-lg fm text-[10px] font-medium transition-all ${Math.round(params[c.key])===idx?"text-white":"gc-s border border-white/10 text-slate-400 hover:text-white"}`}
+                  style={Math.round(params[c.key])===idx?{background:"linear-gradient(135deg,#8b5cf6,#7c3aed)"}:{}}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ):(
+            <>
+              <input type="range" className="su"
+                min={c.min} max={c.max} step={c.step} value={params[c.key]}
+                onChange={e=>setParam(c.key,parseFloat(e.target.value))}/>
+              <div className="flex justify-between mt-0.5">
+                <span className="fm text-[9px] text-slate-700 italic">{c.key}</span>
+                <span className="fm text-[9px] text-slate-700">{c.min} – {c.max}</span>
+              </div>
+            </>
+          )}
         </div>
       ))}
     </div>
@@ -936,7 +1191,11 @@ function Showcase(){
               </div>
             </div>
             <div className="flex-1" style={{minHeight:"min(360px,52vw)"}}>
-              <ShaderCanvas key={d} demo={demo} params={params}/>
+              {demo.canvasType==="globe"
+                ?<GlobeCanvas key={d} params={params}/>
+                :demo.canvasType==="particles"
+                ?<ParticleCanvas key={d} params={params}/>
+                :<ShaderCanvas key={d} demo={demo} params={params}/>}
             </div>
             {/* Mobile uniform sliders */}
             <div className="lg:hidden border-t border-white/7 px-4 py-4">
