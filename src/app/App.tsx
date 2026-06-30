@@ -95,8 +95,8 @@ const ME = {
 const ROLES=["Senior Game Developer","Three.js Specialist","Full Stack Engineer","Interactive 3D Builder","WebGL Enthusiast","React Architect"];
 
 const EDUCATION=[
-  { degree:"M.Tech in Computer Science", college:"Kallam Haranadha Reddy Institute of Technology", period:"2020 – 2022", note:"Completed simultaneously while working full-time at Practically. My strongest CS fundamentals were built here.", emoji:"🎓" },
-  { degree:"B.Tech in Computer Science", college:"Kallam Haranadha Reddy Institute of Technology", period:"2016 – 2020", note:"Built my first interactive 3D prototype in final year — got completely hooked.", emoji:"📚" },
+  { degree:"M.Tech in Computer Science", college:"Kallam Haranadha Institute of Technology", period:"2020 – 2022", note:"Completed simultaneously while working full-time at Practically. My strongest CS fundamentals were built here.", emoji:"🎓" },
+  { degree:"B.Tech in Computer Science", college:"Kallam Haranadha Institute of Technology", period:"2016 – 2020", note:"Built my first interactive 3D prototype in final year — got completely hooked.", emoji:"📚" },
 ];
 
 const EXPERIENCE=[
@@ -517,7 +517,33 @@ function Hero(){
   );
 }
 
-function About(){ const [ref,v]=useVisible(); return(
+const ABOUT_LINES=[
+  `{`,
+  `  "name":     "Adi Chandra Narayana Dasari",`,
+  `  "location": "Hyderabad, India 🇮🇳",`,
+  `  "stack":    ["Three.js","React","WebGL","Unity3D"],`,
+  `  "edu":      "M.Tech + B.Tech CS @ KHIT",`,
+  `  "companies":["3rd Flix","Practically",`,
+  `               "Yugasa Software Labs","Cognitivebotics"],`,
+  `  "available": true // 👋 Let's build!`,
+  `}`,
+];
+
+function About(){
+  const [ref,v]=useVisible();
+  const [step,setStep]=useState(-1);
+  const [done,setDone]=useState(false);
+
+  useEffect(()=>{
+    if(step<0||done)return;
+    if(step>=ABOUT_LINES.length){setDone(true);return;}
+    const t=setTimeout(()=>setStep(s=>s+1),160);
+    return()=>clearTimeout(t);
+  },[step,done]);
+
+  const runAnim=()=>{setStep(0);setDone(false);};
+
+  return(
   <section id="about" className="py-16 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
     <div className="max-w-7xl mx-auto">
       <div ref={ref} className={`transition-all duration-1000 ${v?"opacity-100 translate-y-0":"opacity-0 translate-y-14"}`}>
@@ -531,18 +557,49 @@ function About(){ const [ref,v]=useVisible(); return(
             {/* Terminal bio card */}
             <div className="gc rounded-2xl p-4 sm:p-7">
               <div className="gc-s rounded-xl p-3 sm:p-4 mb-4 sm:mb-5 border border-white/5">
-                <div className="flex items-center gap-2 mb-3"><div className="w-2.5 h-2.5 rounded-full bg-red-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-green-500/70"/><span className="fm text-[10px] text-slate-600 ml-1">about.json</span></div>
-                {/* Condensed on mobile */}
-                <pre className="fm text-[9.5px] sm:text-[11px] text-slate-400 leading-relaxed overflow-x-auto">
-{`{
-  "name":     "Adi Chandra Narayana Dasari",
-  "location": "Hyderabad, India 🇮🇳",
-  "stack":    ["Three.js","React","WebGL","Unity3D"],
-  "edu":      "M.Tech + B.Tech CS @ KHRIT",
-  "companies":["3rd Flix","Practically",
-               "Yugasa","Cognitivebotics"],
-  "available": true // 👋 Let's build!
-}`}
+                {/* Chrome bar */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/70"/>
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70"/>
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
+                    <span className="fm text-[10px] text-slate-600 ml-1">about.json</span>
+                  </div>
+                  {done?(
+                    <span className="fm text-[9px] text-green-400 tracking-widest flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"/>done
+                    </span>
+                  ):(
+                    <button onClick={runAnim}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg fm text-[10px] font-semibold transition-all active:scale-95"
+                      style={{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",color:"#4ade80"}}>
+                      {step>=0?"running…":"▶ run"}
+                    </button>
+                  )}
+                </div>
+                {/* Animated output */}
+                <pre className="fm text-[9.5px] sm:text-[11px] text-slate-400 leading-relaxed overflow-x-auto" style={{minHeight:"8.5em"}}>
+                  {step<0?(
+                    <span className="text-slate-600 italic">{"// click ▶ run to execute"}</span>
+                  ):(
+                    <>
+                      {ABOUT_LINES.slice(0,step).map((line,i)=>(
+                        <span key={i} className="block" style={{animationName:"slide-up-mob",animationDuration:".18s",animationFillMode:"both"}}>
+                          {line.startsWith('  "') ? (
+                            <>
+                              <span className="text-slate-600">{line.match(/^(\s+)/)?.[1]??""}</span>
+                              <span className="text-cyan-400">{line.match(/"[^"]+"/)?.[0]??""}</span>
+                              <span className="text-slate-500">{line.includes(":") ? ":" : ""}</span>
+                              <span className="text-purple-300">{line.replace(/^\s+"[^"]+"\s*:\s*/,"")}</span>
+                            </>
+                          ):(
+                            <span className="text-slate-400">{line}</span>
+                          )}
+                        </span>
+                      ))}
+                      {!done&&<span className="text-purple-400" style={{animation:"blink 1s step-end infinite"}}>▋</span>}
+                    </>
+                  )}
                 </pre>
               </div>
               <p className="text-slate-300 leading-relaxed fb text-sm sm:text-base mb-3">{ME.bio}</p>
@@ -592,7 +649,8 @@ function About(){ const [ref,v]=useVisible(); return(
       </div>
     </div>
   </section>
-); }
+  );
+}
 
 function Experience(){ const [ref,v]=useVisible(); const [open,setOpen]=useState<number|null>(0); return(
   <section id="experience" className="py-16 sm:py-28 px-4 sm:px-6">
