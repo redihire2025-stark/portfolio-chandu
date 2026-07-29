@@ -1,0 +1,7 @@
+node_modules
+dist
+.vite
+.netlify
+.claude
+*.stackdump
+.env
