@@ -88,7 +88,6 @@ const ME = {
   name: "Adi Chandra Narayana Dasari", title: "Full Stack Software Engineer",
   email: "chandu46514@gmail.com", phone: "9701320246", location: "Hyderabad, India",
   linkedin: "https://www.linkedin.com/in/adi-chandra-narayana-dasari-232964218/",
-  tagline: "I turn coffee and curiosity into Three.js experiences.",
   bio: "Full Stack Software Engineer with 6+ years of experience developing interactive 3D applications and browser-based visualisation tools using React.js, TypeScript, Three.js, Node.js, Unity3D, and PlayCanvas. I genuinely lose track of time when I'm optimising a WebGL render loop — that's how I know this is the right career.",
   bio2: "I completed my M.Tech while working full-time at Practically (yes, simultaneously) — which taught me that constraints breed creativity. Today I build everything from GLSL shaders to PostgreSQL schemas, always obsessing over performance, UX, and the tiny details nobody else notices.",
 };
@@ -248,7 +247,8 @@ function Cursor() { const ring = useRef<HTMLDivElement>(null); const dot = useRe
 
 function Particles() { const ref = useRef<HTMLCanvasElement>(null); useEffect(() => { const c = ref.current!; const ctx = c.getContext("2d")!; let raf: number; const mouse = { x: -999, y: -999 }; const resize = () => { c.width = c.offsetWidth; c.height = c.offsetHeight; }; resize(); const ro = new ResizeObserver(resize); ro.observe(c); window.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; }); interface P { x: number; y: number; vx: number; vy: number; r: number; hue: number; } const pts: P[] = Array.from({ length: 100 }, () => ({ x: Math.random() * c.width, y: Math.random() * c.height, vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4, r: Math.random() * 1.4 + .4, hue: [0, 8, 355][Math.floor(Math.random() * 3)] })); const draw = () => { ctx.clearRect(0, 0, c.width, c.height); pts.forEach(p => { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > c.width) p.vx *= -1; if (p.y < 0 || p.y > c.height) p.vy *= -1; const dx = p.x - mouse.x, dy = p.y - mouse.y, d2 = dx * dx + dy * dy; if (d2 < 10000) { const d = Math.sqrt(d2); p.x += dx / d * 1.8; p.y += dy / d * 1.8; } ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `hsla(${p.hue},80%,70%,.6)`; ctx.fill(); }); for (let i = 0; i < pts.length; i++)for (let j = i + 1; j < pts.length; j++) { const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = Math.sqrt(dx * dx + dy * dy); if (d < 130) { ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.strokeStyle = `rgba(255,43,43,${(1 - d / 130) * .09})`; ctx.lineWidth = .5; ctx.stroke(); } } raf = requestAnimationFrame(draw); }; draw(); return () => { cancelAnimationFrame(raf); ro.disconnect(); }; }, []); return <canvas ref={ref} className="absolute inset-0 w-full h-full" />; }
 
-// ── Hero 3D geometry — real Three.js, not a 2D canvas trick ─────────────────
+// ── Hero 3D strip — real Three.js drifting shapes, tucked along the bottom
+// edge so it never competes with the name/text above it ─────────────────────
 function HeroGeometry() {
   const mountRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -259,25 +259,28 @@ function HeroGeometry() {
     renderer.setSize(el.clientWidth, el.clientHeight);
     el.appendChild(renderer.domElement);
 
-    const camera = new THREE.PerspectiveCamera(45, el.clientWidth / el.clientHeight, .1, 100);
-    camera.position.z = 9;
+    const camera = new THREE.PerspectiveCamera(50, el.clientWidth / el.clientHeight, .1, 100);
+    camera.position.z = 7;
     const scene = new THREE.Scene();
 
-    const colors = [0xff2b2b, 0xff5c5c, 0xe0311f];
-    interface Shape { mesh: THREE.LineSegments; base: THREE.Vector3; speed: number; bob: number; pulse: number; }
-    const shapes: Shape[] = [
-      { geo: new THREE.IcosahedronGeometry(1.15, 0), pos: [-3.2, 1.1, -1] },
-      { geo: new THREE.TorusKnotGeometry(.8, .24, 110, 16), pos: [3.3, -0.6, -2] },
-      { geo: new THREE.OctahedronGeometry(1, 0), pos: [0.4, 2.1, -3] },
-    ].map(({ geo, pos }, i) => {
-      const mat = new THREE.LineBasicMaterial({ color: colors[i], transparent: true, opacity: .55 });
+    const colors = [0xff2b2b, 0xff5c5c, 0xe0311f, 0xff8a5c];
+    interface Shape { mesh: THREE.LineSegments; y: number; vx: number; spin: number; bob: number; pulse: number; }
+    const kinds = [
+      () => new THREE.IcosahedronGeometry(.34, 0),
+      () => new THREE.OctahedronGeometry(.36, 0),
+      () => new THREE.TetrahedronGeometry(.36, 0),
+    ];
+    const shapes: Shape[] = Array.from({ length: 6 }, (_, i) => {
+      const geo = kinds[i % kinds.length]();
+      const mat = new THREE.LineBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: .5 });
       const mesh = new THREE.LineSegments(new THREE.WireframeGeometry(geo), mat);
-      mesh.position.set(...(pos as [number, number, number]));
+      const y = (Math.random() - .5) * 1.1;
+      mesh.position.set(-7 + i * 2.6 + Math.random(), y, -1 - Math.random() * 2);
       scene.add(mesh);
-      return { mesh, base: mesh.position.clone(), speed: .25 + i * .08, bob: Math.random() * Math.PI * 2, pulse: 0 };
+      return { mesh, y, vx: .18 + Math.random() * .12, spin: .3 + Math.random() * .3, bob: Math.random() * Math.PI * 2, pulse: 0 };
     });
 
-    // parallax: shapes drift opposite the mouse, like they're floating in front of the page
+    // gentle parallax within the strip only — keeps it playful without pulling focus upward
     const mouse = { x: 0, y: 0 };
     const onMove = (e: MouseEvent) => {
       const r = el.getBoundingClientRect();
@@ -285,26 +288,25 @@ function HeroGeometry() {
       mouse.y = ((e.clientY - r.top) / r.height - .5) * 2;
     };
     window.addEventListener("mousemove", onMove);
-    // playful "boop" — click anywhere in the hero and every shape gives a little kick
+    // playful "boop" — click the strip and the drifting shapes give a little kick
     const onClick = () => shapes.forEach(s => { s.pulse = 1; });
     el.addEventListener("pointerdown", onClick);
 
+    const EDGE = 7.5;
     let raf: number; const timer = new THREE.Timer();
     const animate = () => {
       raf = requestAnimationFrame(animate); timer.update();
       const t = timer.getElapsed();
       shapes.forEach(s => {
-        s.mesh.rotation.x = t * s.speed * .5;
-        s.mesh.rotation.y = t * s.speed * .7;
-        s.mesh.position.y = s.base.y + Math.sin(t * .6 + s.bob) * .3;
-        s.mesh.position.x = s.base.x - mouse.x * .5;
-        s.mesh.position.z = s.base.z - mouse.y * .3;
+        s.mesh.rotation.x = t * s.spin * .6;
+        s.mesh.rotation.y = t * s.spin * .8;
+        s.mesh.position.x += s.vx * timer.getDelta();
+        if (s.mesh.position.x > EDGE) s.mesh.position.x = -EDGE;
+        s.mesh.position.y = s.y + Math.sin(t * .8 + s.bob) * .18 - mouse.y * .2;
         s.pulse *= 0.92;
-        const scale = 1 + s.pulse * .35;
-        s.mesh.scale.setScalar(scale);
+        s.mesh.scale.setScalar(1 + s.pulse * .5);
       });
-      camera.position.x += (mouse.x * .6 - camera.position.x) * .04;
-      camera.position.y += (-mouse.y * .4 - camera.position.y) * .04;
+      camera.position.x += (mouse.x * .3 - camera.position.x) * .04;
       camera.lookAt(0, 0, 0);
       renderer.render(scene, camera);
     };
@@ -327,7 +329,7 @@ function HeroGeometry() {
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
   }, []);
-  return <div ref={mountRef} className="absolute inset-0 w-full h-full cursor-pointer" />;
+  return <div ref={mountRef} className="absolute bottom-0 left-0 right-0 h-[140px] sm:h-[180px] cursor-pointer" />;
 }
 
 // ── GLSL shaders ────────────────────────────────────────────────────────────
@@ -888,8 +890,6 @@ function Hero() {
         {/* Tagline */}
         <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7, delay: .38 }}
           className="text-slate-400 text-base sm:text-lg md:text-xl max-w-xl mx-auto mb-8 leading-relaxed fb px-2">
-          {ME.tagline}
-          <br />
           <span className="text-slate-500 text-sm">6+ yrs · Hyderabad, India · M.Tech + B.Tech CS</span>
         </motion.p>
 
