@@ -174,6 +174,12 @@ const TOOLKIT = [
   { name: "GraphQL", icon: SiGraphql, color: "#e535ab", desc: "Efficient, typed API queries for complex data" },
 ];
 
+// Granular 3D engineering skills — real work, not just "Three.js" as a logo
+const CORE_3D_SKILLS = [
+  "Custom Mesh Generation", "Geometry & Coordinate Transformations", "Camera Controls",
+  "Object Manipulation", "Vectors, Matrices & Quaternions", "3D Scene Composition",
+];
+
 // Companies/clients from employment — full history lives in the Experience timeline
 const PROFESSIONAL_WORK = [
   { name: "Cognitivebotics", url: "cognitivebotics.com" },
@@ -241,6 +247,88 @@ function useScrollPct() { const [p, setP] = useState(0); useEffect(() => { const
 function Cursor() { const ring = useRef<HTMLDivElement>(null); const dot = useRef<HTMLDivElement>(null); const pos = useRef({ x: 0, y: 0 }); const lag = useRef({ x: 0, y: 0 }); useEffect(() => { const mv = (e: MouseEvent) => { pos.current = { x: e.clientX, y: e.clientY }; if (dot.current) { dot.current.style.left = `${e.clientX}px`; dot.current.style.top = `${e.clientY}px`; } }; window.addEventListener("mousemove", mv); let raf: number; const loop = () => { lag.current.x += (pos.current.x - lag.current.x) * .11; lag.current.y += (pos.current.y - lag.current.y) * .11; if (ring.current) { ring.current.style.left = `${lag.current.x}px`; ring.current.style.top = `${lag.current.y}px`; } raf = requestAnimationFrame(loop); }; loop(); return () => { window.removeEventListener("mousemove", mv); cancelAnimationFrame(raf); }; }, []); return <><div id="cr" ref={ring} /><div id="cd" ref={dot} /></>; }
 
 function Particles() { const ref = useRef<HTMLCanvasElement>(null); useEffect(() => { const c = ref.current!; const ctx = c.getContext("2d")!; let raf: number; const mouse = { x: -999, y: -999 }; const resize = () => { c.width = c.offsetWidth; c.height = c.offsetHeight; }; resize(); const ro = new ResizeObserver(resize); ro.observe(c); window.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; }); interface P { x: number; y: number; vx: number; vy: number; r: number; hue: number; } const pts: P[] = Array.from({ length: 100 }, () => ({ x: Math.random() * c.width, y: Math.random() * c.height, vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4, r: Math.random() * 1.4 + .4, hue: [0, 8, 355][Math.floor(Math.random() * 3)] })); const draw = () => { ctx.clearRect(0, 0, c.width, c.height); pts.forEach(p => { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > c.width) p.vx *= -1; if (p.y < 0 || p.y > c.height) p.vy *= -1; const dx = p.x - mouse.x, dy = p.y - mouse.y, d2 = dx * dx + dy * dy; if (d2 < 10000) { const d = Math.sqrt(d2); p.x += dx / d * 1.8; p.y += dy / d * 1.8; } ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `hsla(${p.hue},80%,70%,.6)`; ctx.fill(); }); for (let i = 0; i < pts.length; i++)for (let j = i + 1; j < pts.length; j++) { const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = Math.sqrt(dx * dx + dy * dy); if (d < 130) { ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.strokeStyle = `rgba(255,43,43,${(1 - d / 130) * .09})`; ctx.lineWidth = .5; ctx.stroke(); } } raf = requestAnimationFrame(draw); }; draw(); return () => { cancelAnimationFrame(raf); ro.disconnect(); }; }, []); return <canvas ref={ref} className="absolute inset-0 w-full h-full" />; }
+
+// ── Hero 3D geometry — real Three.js, not a 2D canvas trick ─────────────────
+function HeroGeometry() {
+  const mountRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = mountRef.current; if (!el) return;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(el.clientWidth, el.clientHeight);
+    el.appendChild(renderer.domElement);
+
+    const camera = new THREE.PerspectiveCamera(45, el.clientWidth / el.clientHeight, .1, 100);
+    camera.position.z = 9;
+    const scene = new THREE.Scene();
+
+    const colors = [0xff2b2b, 0xff5c5c, 0xe0311f];
+    interface Shape { mesh: THREE.LineSegments; base: THREE.Vector3; speed: number; bob: number; pulse: number; }
+    const shapes: Shape[] = [
+      { geo: new THREE.IcosahedronGeometry(1.15, 0), pos: [-3.2, 1.1, -1] },
+      { geo: new THREE.TorusKnotGeometry(.8, .24, 110, 16), pos: [3.3, -0.6, -2] },
+      { geo: new THREE.OctahedronGeometry(1, 0), pos: [0.4, 2.1, -3] },
+    ].map(({ geo, pos }, i) => {
+      const mat = new THREE.LineBasicMaterial({ color: colors[i], transparent: true, opacity: .55 });
+      const mesh = new THREE.LineSegments(new THREE.WireframeGeometry(geo), mat);
+      mesh.position.set(...(pos as [number, number, number]));
+      scene.add(mesh);
+      return { mesh, base: mesh.position.clone(), speed: .25 + i * .08, bob: Math.random() * Math.PI * 2, pulse: 0 };
+    });
+
+    // parallax: shapes drift opposite the mouse, like they're floating in front of the page
+    const mouse = { x: 0, y: 0 };
+    const onMove = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect();
+      mouse.x = ((e.clientX - r.left) / r.width - .5) * 2;
+      mouse.y = ((e.clientY - r.top) / r.height - .5) * 2;
+    };
+    window.addEventListener("mousemove", onMove);
+    // playful "boop" — click anywhere in the hero and every shape gives a little kick
+    const onClick = () => shapes.forEach(s => { s.pulse = 1; });
+    el.addEventListener("pointerdown", onClick);
+
+    let raf: number; const timer = new THREE.Timer();
+    const animate = () => {
+      raf = requestAnimationFrame(animate); timer.update();
+      const t = timer.getElapsed();
+      shapes.forEach(s => {
+        s.mesh.rotation.x = t * s.speed * .5;
+        s.mesh.rotation.y = t * s.speed * .7;
+        s.mesh.position.y = s.base.y + Math.sin(t * .6 + s.bob) * .3;
+        s.mesh.position.x = s.base.x - mouse.x * .5;
+        s.mesh.position.z = s.base.z - mouse.y * .3;
+        s.pulse *= 0.92;
+        const scale = 1 + s.pulse * .35;
+        s.mesh.scale.setScalar(scale);
+      });
+      camera.position.x += (mouse.x * .6 - camera.position.x) * .04;
+      camera.position.y += (-mouse.y * .4 - camera.position.y) * .04;
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    const ro = new ResizeObserver(() => {
+      if (!el) return;
+      renderer.setSize(el.clientWidth, el.clientHeight);
+      camera.aspect = el.clientWidth / el.clientHeight;
+      camera.updateProjectionMatrix();
+    });
+    ro.observe(el);
+
+    return () => {
+      cancelAnimationFrame(raf); ro.disconnect();
+      window.removeEventListener("mousemove", onMove);
+      el.removeEventListener("pointerdown", onClick);
+      shapes.forEach(s => { s.mesh.geometry.dispose(); (s.mesh.material as THREE.Material).dispose(); });
+      renderer.dispose();
+      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+    };
+  }, []);
+  return <div ref={mountRef} className="absolute inset-0 w-full h-full cursor-pointer" />;
+}
 
 // ── GLSL shaders ────────────────────────────────────────────────────────────
 const VERT = `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
@@ -758,6 +846,7 @@ function Hero() {
   }, [txt, fwd, ri]);
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <HeroGeometry />
       <Particles />
       {/* Ambient orbs */}
       <div className="absolute inset-0 pointer-events-none">
@@ -1081,6 +1170,16 @@ function Skills() {
                 </div>
               );
             })}
+          </div>
+          <div className="mt-8 sm:mt-10">
+            <div className="sl2 mb-3 text-center">// core 3D engineering</div>
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+              {CORE_3D_SKILLS.map(s => (
+                <span key={s} className="px-3.5 py-2 rounded-full gc-s border border-red-500/20 text-slate-300 fm text-[11px] sm:text-[12px]">
+                  {s}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
