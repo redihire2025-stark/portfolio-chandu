@@ -927,17 +927,20 @@ function Hero() {
   );
 }
 
-const ABOUT_LINES = [
-  `{`,
-  `  "name":     "Adi Chandra Narayana Dasari",`,
-  `  "location": "Hyderabad, India",`,
-  `  "stack":    ["Three.js","React","WebGL","Unity3D"],`,
-  `  "edu":      "M.Tech + B.Tech CS @ KHIT",`,
-  `  "companies":["3rd Flix","Practically",`,
-  `               "Yugasa Software Labs","Cognitivebotics"],`,
-  `  "available": true // Let's build!`,
-  `}`,
-];
+const ABOUT_STEPS = [
+  { kind: "json", line: `{` },
+  { kind: "json", line: `  "name":     "Adi Chandra Narayana Dasari",` },
+  { kind: "json", line: `  "location": "Hyderabad, India",` },
+  { kind: "json", line: `  "stack":    ["Three.js","React","WebGL","Unity3D"],` },
+  { kind: "json", line: `  "edu":      "M.Tech + B.Tech CS @ KHIT",` },
+  { kind: "json", line: `  "companies":["3rd Flix","Practically",` },
+  { kind: "json", line: `               "Yugasa Software Labs","Cognitivebotics"],` },
+  { kind: "json", line: `  "available": true // Let's build!` },
+  { kind: "json", line: `}` },
+  { kind: "cmd", line: `node whoami.js --full` },
+  { kind: "prose", line: ME.bio },
+  { kind: "prose", line: ME.bio2 },
+] as const;
 
 function About() {
   const [ref, v] = useVisible();
@@ -946,12 +949,16 @@ function About() {
 
   useEffect(() => {
     if (step < 0 || done) return;
-    if (step >= ABOUT_LINES.length) { setDone(true); return; }
-    const t = setTimeout(() => setStep(s => s + 1), 160);
+    if (step >= ABOUT_STEPS.length) { setDone(true); return; }
+    const upcoming = ABOUT_STEPS[step];
+    const delay = upcoming?.kind === "prose" ? 500 : upcoming?.kind === "cmd" ? 320 : 130;
+    const t = setTimeout(() => setStep(s => s + 1), delay);
     return () => clearTimeout(t);
   }, [step, done]);
 
   const runAnim = () => { setStep(0); setDone(false); };
+  // auto-play once the card scrolls into view, so visitors don't need to know to click run
+  useEffect(() => { if (v && step === -1) runAnim(); }, [v]);
 
   return (
     <section id="about" className="py-16 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
@@ -973,47 +980,62 @@ function About() {
                       <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
                       <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
                       <div className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
-                      <span className="fm text-[10px] text-slate-600 ml-1">about.json</span>
+                      <span className="fm text-[10px] text-slate-600 ml-1">about.js</span>
                     </div>
-                    {done ? (
-                      <span className="fm text-[9px] text-green-400 tracking-widest flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />done
+                    {step < 0 ? (
+                      <button onClick={runAnim}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg fm text-[10px] font-semibold transition-all active:scale-95 animate-pulse hover:animate-none"
+                        style={{ background: "rgba(34,197,94,.14)", border: "1px solid rgba(74,222,128,.5)", color: "#4ade80", boxShadow: "0 0 16px rgba(74,222,128,.15)" }}>
+                        <Play size={10} fill="currentColor" /> run — meet the human
+                      </button>
+                    ) : !done ? (
+                      <span className="fm text-[10px] font-semibold flex items-center gap-1.5" style={{ color: "#4ade80" }}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block animate-pulse" />running…
                       </span>
                     ) : (
                       <button onClick={runAnim}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg fm text-[10px] font-semibold transition-all active:scale-95"
-                        style={{ background: "rgba(34,197,94,.12)", border: "1px solid rgba(34,197,94,.3)", color: "#4ade80" }}>
-                        {step >= 0 ? "running…" : <><Play size={10} fill="currentColor" /> run</>}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg fm text-[10px] font-semibold transition-all active:scale-95 hover:opacity-80"
+                        style={{ background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.3)", color: "#4ade80" }}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />done · ↻ replay
                       </button>
                     )}
                   </div>
                   {/* Animated output */}
-                  <pre className="fm text-[9.5px] sm:text-[11px] text-slate-400 leading-relaxed overflow-x-auto" style={{ minHeight: "8.5em" }}>
+                  <div className="fm text-[9.5px] sm:text-[11px] text-slate-400 leading-relaxed overflow-x-auto" style={{ minHeight: "8.5em" }}>
                     {step < 0 ? (
-                      <span className="text-slate-600 italic">{"// click run to execute"}</span>
+                      <span className="text-slate-600 italic">{"// click run to meet the human behind the code"}</span>
                     ) : (
                       <>
-                        {ABOUT_LINES.slice(0, step).map((line, i) => (
+                        {ABOUT_STEPS.slice(0, step).map((s, i) => (
                           <span key={i} className="block" style={{ animationName: "slide-up-mob", animationDuration: ".18s", animationFillMode: "both" }}>
-                            {line.startsWith('  "') ? (
-                              <>
-                                <span className="text-slate-600">{line.match(/^(\s+)/)?.[1] ?? ""}</span>
-                                <span className="text-red-400">{line.match(/"[^"]+"/)?.[0] ?? ""}</span>
-                                <span className="text-slate-500">{line.includes(":") ? ":" : ""}</span>
-                                <span className="text-red-300">{line.replace(/^\s+"[^"]+"\s*:\s*/, "")}</span>
-                              </>
+                            {s.kind === "json" ? (
+                              <span className="whitespace-pre">
+                                {s.line.startsWith('  "') ? (
+                                  <>
+                                    <span className="text-slate-600">{s.line.match(/^(\s+)/)?.[1] ?? ""}</span>
+                                    <span className="text-red-400">{s.line.match(/"[^"]+"/)?.[0] ?? ""}</span>
+                                    <span className="text-slate-500">{s.line.includes(":") ? ":" : ""}</span>
+                                    <span className="text-red-300">{s.line.replace(/^\s+"[^"]+"\s*:\s*/, "")}</span>
+                                  </>
+                                ) : (
+                                  <span className="text-slate-400">{s.line}</span>
+                                )}
+                              </span>
+                            ) : s.kind === "cmd" ? (
+                              <span className="whitespace-pre block mt-3 mb-2">
+                                <span className="text-slate-600">$ </span>
+                                <span className="text-red-300">{s.line}</span>
+                              </span>
                             ) : (
-                              <span className="text-slate-400">{line}</span>
+                              <span className="fb text-[12px] sm:text-[13.5px] text-slate-300 leading-relaxed block mb-3 whitespace-normal">{s.line}</span>
                             )}
                           </span>
                         ))}
                         {!done && <span className="text-red-400" style={{ animation: "blink 1s step-end infinite" }}>▋</span>}
                       </>
                     )}
-                  </pre>
+                  </div>
                 </div>
-                <p className="text-slate-300 leading-relaxed fb text-sm sm:text-base mb-3">{ME.bio}</p>
-                <p className="text-slate-400 leading-relaxed fb text-sm sm:text-base">{ME.bio2}</p>
               </div>
               {/* Contact */}
               <div className="gc rounded-2xl p-4 sm:p-5">
