@@ -15,7 +15,9 @@ import {
 import {
   SiReact, SiTypescript, SiThreedotjs, SiUnity, SiNodedotjs,
   SiExpress, SiPostgresql, SiMongodb, SiRedux, SiDocker,
+  SiGraphql,
 } from "react-icons/si";
+import { FaAws } from "react-icons/fa";
 
 const G = `
   @keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0} }
@@ -83,7 +85,7 @@ const G = `
 `;
 
 const ME = {
-  name: "Adi Chandra Narayana Dasari", title: "Senior Developer",
+  name: "Adi Chandra Narayana Dasari", title: "Full Stack Software Engineer",
   email: "chandu46514@gmail.com", phone: "9701320246", location: "Hyderabad, India",
   linkedin: "https://www.linkedin.com/in/adi-chandra-narayana-dasari-232964218/",
   tagline: "I turn coffee and curiosity into Three.js experiences.",
@@ -91,7 +93,7 @@ const ME = {
   bio2: "I completed my M.Tech while working full-time at Practically (yes, simultaneously) — which taught me that constraints breed creativity. Today I build everything from GLSL shaders to PostgreSQL schemas, always obsessing over performance, UX, and the tiny details nobody else notices.",
 };
 
-const ROLES = ["Senior Game Developer", "Three.js Specialist", "Full Stack Engineer", "Interactive 3D Builder", "WebGL Enthusiast", "React Architect"];
+const ROLES = ["Full Stack Software Engineer", "React.js Developer", "Node.js Engineer", "Three.js / WebGL Developer", "3D Web Graphics Specialist"];
 
 const EDUCATION = [
   { degree: "M.Tech in Computer Science", college: "Kallam Haranadha Institute of Technology", period: "2020 – 2022", note: "Completed simultaneously while working full-time at Practically. My strongest CS fundamentals were built here." },
@@ -101,17 +103,17 @@ const EDUCATION = [
 const EXPERIENCE = [
   {
     company: "Cognitivebotics", fullName: "Cognitivebotics Technologies Pvt. Ltd.",
-    role: "Senior Game Developer", period: "Apr 2023 — Present", duration: "3+ yrs · Current",
-    type: "EdTech · 3D · Full Stack", color: "#ff2b2b", logo: "/logos/cognitivebotics.webp",
-    summary: "Developing responsive, browser-based interactive educational applications using React.js, TypeScript, Three.js, and PlayCanvas — collaborating with psychologists and designers to ship high-performance learning experiences.",
+    role: "Full Stack Developer / Software Engineer", period: "Apr 2023 — Present", duration: "3+ yrs · Current",
+    type: "Full Stack · Web Platform", color: "#ff2b2b", logo: "/logos/cognitivebotics.webp",
+    summary: "Architecting and developing scalable, high-performance web applications and backend services using React.js, TypeScript, and Node.js — from REST API integrations to CI/CD pipelines and production reliability.",
     bullets: [
-      "Built interactive 3D visualisations with camera controls, object transformations, zoom, pan, and rotation for educational content",
-      "Developed reusable React components with Hooks and modern state management (Redux / Zustand) used across the entire platform",
-      "Built Node.js/Express REST APIs for data management and seamless frontend-backend communication",
-      "Optimised rendering performance through code splitting, lazy loading, and asset loading strategies",
-      "Collaborated with psychologists, UX designers, and cross-functional teams to deliver scalable high-performance web apps",
+      "Architected scalable, high-performance web applications using React.js, TypeScript, and modern state management",
+      "Built Node.js backend services and microservices, integrating 20+ REST APIs and third-party services",
+      "Implemented real-time features using WebSockets for bidirectional client-server communication",
+      "Reduced database query time by 40% and improved app response time by 35% (PostgreSQL, MongoDB)",
+      "Cut release time from 2 days to 4 hours via CI/CD (GitHub Actions, AWS), maintaining 99.9% uptime across 8+ projects",
     ],
-    tech: ["React.js", "TypeScript", "Three.js", "PlayCanvas", "Node.js", "Express", "REST APIs", "Redux", "Zustand", "WebGL"],
+    tech: ["React.js", "TypeScript", "Node.js", "REST APIs", "WebSockets", "PostgreSQL", "MongoDB", "AWS", "CI/CD"],
   },
   {
     company: "Yugasa Software Labs", fullName: "Yugasa Software Labs",
@@ -129,17 +131,18 @@ const EXPERIENCE = [
   },
   {
     company: "Practically", fullName: "Practically (EdTech)",
-    role: "Unity Developer", period: "Aug 2020 — Oct 2022", duration: "2+ yrs",
+    role: "3D Developer (Promoted to Developer)", period: "Aug 2020 — Oct 2022", duration: "2+ yrs",
     type: "EdTech · Unity · PlayCanvas", color: "#e0311f", logo: "/logos/practically.jpg",
-    summary: "Joined as an intern, offered a permanent position within one month, and promoted to Unity Developer within a year. Developed educational games while completing M.Tech simultaneously.",
+    summary: "Built and launched 300+ interactive 2D/3D simulations using PlayCanvas and Unity, reaching 100K+ students, while completing M.Tech simultaneously.",
     bullets: [
-      "Joined as intern — offered permanent Junior Developer role within one month based on performance",
-      "Promoted to Unity Developer within a year — fastest promotion on the team",
-      "Developed educational games and interactive 3D content using Unity3D and C#",
-      "Created reusable templates to streamline the game development pipeline across the studio",
-      "Gained hands-on PlayCanvas experience — built web-based games with JavaScript for cross-platform delivery",
+      "Built and launched 300+ interactive 2D/3D simulations using PlayCanvas and Unity, reaching 100K+ students",
+      "Streamlined simulation performance across web and mobile platforms, reducing load time by 50%",
+      "Developed interactive experiences with real-time user interactions, 3D scene manipulation, and responsive UI using JavaScript/TypeScript",
+      "Worked with Node.js-based application services and REST APIs as part of full-stack web application development",
+      "Partnered with product, design, and QA teams in Agile sprints to deliver 40+ features and updates on schedule",
+      "Promoted from Intern to Developer within 6 months based on technical performance and delivery",
     ],
-    tech: ["Unity3D", "C#", "PlayCanvas", "JavaScript", "HTML5", "Game Development"],
+    tech: ["Unity3D", "C#", "PlayCanvas", "JavaScript", "TypeScript", "Node.js", "REST APIs"],
   },
   {
     company: "3rd Flix Visual Effects", fullName: "3rd Flix Visual Effects",
@@ -167,6 +170,8 @@ const TOOLKIT = [
   { name: "MongoDB", icon: SiMongodb, color: "#47a248", desc: "Flexible NoSQL for rapid iteration" },
   { name: "Redux", icon: SiRedux, color: "#764abc", desc: "Predictable state management at scale" },
   { name: "Docker", icon: SiDocker, color: "#2496ed", desc: "Containerised builds for consistent deployments" },
+  { name: "AWS", icon: FaAws, color: "#ff9900", desc: "EC2, S3, RDS & CloudFront for production infra" },
+  { name: "GraphQL", icon: SiGraphql, color: "#e535ab", desc: "Efficient, typed API queries for complex data" },
 ];
 
 // Companies/clients from employment — full history lives in the Experience timeline
